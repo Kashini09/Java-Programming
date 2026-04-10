@@ -1,0 +1,307 @@
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.awt.Desktop;
+import java.util.*;
+
+public class App {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(LoginPage::new);
+    }
+}
+
+/* ---------------- LOGIN ---------------- */
+
+class LoginPage extends JFrame {
+    JTextField username;
+    JPasswordField password;
+
+    LoginPage() {
+        setTitle("Login");
+        setSize(300,150);
+        setLayout(new GridLayout(3,2));
+
+        add(new JLabel("Username"));
+        username = new JTextField();
+        add(username);
+
+        add(new JLabel("Password"));
+        password = new JPasswordField();
+        add(password);
+
+        JButton login = new JButton("Login");
+        add(new JLabel());
+        add(login);
+
+        login.addActionListener(e -> {
+            if(username.getText().equals("Kashini") &&
+               String.valueOf(password.getPassword()).equals("vehiclerental")){
+                new BookingForm();
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this,"Invalid login");
+            }
+        });
+
+        setVisible(true);
+    }
+}
+
+/* ---------------- DATA STORE ---------------- */
+
+class BookingStore {
+    static Map<String, java.util.List<Booking>> data = new HashMap<>();
+}
+
+class Booking {
+    String details;
+    String pdf;
+    boolean paid;
+
+    Booking(String d,String p,boolean paid){
+        this.details=d;
+        this.pdf=p;
+        this.paid=paid;
+    }
+}
+
+/* ---------------- BOOKING FORM ---------------- */
+
+class BookingForm extends JFrame {
+
+    JComboBox<String> type,model,payment,proof;
+    JTextField hours,date,name,mobile;
+    JLabel amount,fileLabel;
+    JCheckBox paid;
+    String pdfPath="";
+
+    BookingForm(){
+
+        setTitle("Booking");
+        setSize(420,550);
+        setLayout(new GridLayout(14,2));
+
+        add(new JLabel("Customer Name"));
+        name=new JTextField("Kashini");
+        add(name);
+
+        add(new JLabel("Mobile Number"));
+        mobile=new JTextField();
+        add(mobile);
+
+        add(new JLabel("Vehicle Type"));
+        type=new JComboBox<>(new String[]{"Bike","Car","Van"});
+        add(type);
+
+        add(new JLabel("Model"));
+        model=new JComboBox<>();
+        add(model);
+
+        add(new JLabel("Hours"));
+        hours=new JTextField();
+        add(hours);
+
+        add(new JLabel("Date (yyyy-mm-dd)"));
+        date=new JTextField();
+        add(date);
+
+        add(new JLabel("Payment"));
+        payment=new JComboBox<>(new String[]{"Cash","Online"});
+        add(payment);
+
+        add(new JLabel("Proof Type"));
+        proof=new JComboBox<>(new String[]{"Aadhar","License"});
+        add(proof);
+
+        JButton upload=new JButton("Upload PDF");
+        add(upload);
+        fileLabel=new JLabel("No file");
+        add(fileLabel);
+
+        paid=new JCheckBox("Paid");
+        add(paid);
+
+        add(new JLabel("Amount"));
+        amount=new JLabel("0");
+        add(amount);
+
+        JButton calc=new JButton("Calculate");
+        JButton save=new JButton("Save");
+        add(calc); add(save);
+
+        JButton calendar=new JButton("Calendar");
+        add(calendar);
+
+        type.addActionListener(e->loadModel());
+        calc.addActionListener(e->calculate());
+        upload.addActionListener(e->upload());
+        save.addActionListener(e->save());
+        calendar.addActionListener(e->{ new CalendarUI(); dispose();});
+
+        loadModel();
+        setVisible(true);
+    }
+
+    void loadModel(){
+        model.removeAllItems();
+        if(type.getSelectedItem().equals("Bike")){
+            model.addItem("Activa"); model.addItem("Pulsar");
+        }else if(type.getSelectedItem().equals("Car")){
+            model.addItem("Swift"); model.addItem("Innova");
+        }else{
+            model.addItem("Traveller");
+        }
+    }
+
+    void calculate(){
+        try{
+            int h=Integer.parseInt(hours.getText());
+            int r= type.getSelectedItem().equals("Bike")?50:
+                   type.getSelectedItem().equals("Car")?100:150;
+            amount.setText(""+(h*r));
+        }catch(Exception ignored){}
+    }
+
+    void upload(){
+        JFileChooser fc=new JFileChooser();
+        if(fc.showOpenDialog(this)==JFileChooser.APPROVE_OPTION){
+            pdfPath=fc.getSelectedFile().getAbsolutePath();
+            fileLabel.setText(fc.getSelectedFile().getName());
+        }
+    }
+
+    void save(){
+
+        String phone = mobile.getText();
+
+        if(!phone.matches("\\d{10}")){
+            JOptionPane.showMessageDialog(this,"Mobile number must be exactly 10 digits");
+            return;
+        }
+
+        calculate();
+
+        String key=date.getText();
+
+        String details =
+                "Customer: "+name.getText()+"\n"+
+                "Mobile: "+mobile.getText()+"\n"+
+                "Vehicle: "+type.getSelectedItem()+"\n"+
+                "Model: "+model.getSelectedItem()+"\n"+
+                "Hours: "+hours.getText()+"\n"+
+                "Amount: "+amount.getText()+"\n"+
+                "Payment: "+payment.getSelectedItem()+"\n"+
+                "Proof: "+proof.getSelectedItem();
+
+        Booking b=new Booking(details,pdfPath,paid.isSelected());
+
+        BookingStore.data.computeIfAbsent(key,k->new ArrayList<>()).add(b);
+
+        JOptionPane.showMessageDialog(this,"Saved");
+    }
+}
+
+/* ---------------- CALENDAR ---------------- */
+
+class CalendarUI extends JFrame {
+
+    Calendar cal=Calendar.getInstance();
+    JPanel panel=new JPanel(new GridLayout(0,7));
+    JLabel title=new JLabel("",SwingConstants.CENTER);
+
+    CalendarUI(){
+        setTitle("Calendar");
+        setSize(700,500);
+        setLayout(new BorderLayout());
+
+        JPanel top=new JPanel(new BorderLayout());
+
+        JButton back=new JButton("Back");
+        JButton prev=new JButton("<");
+        JButton next=new JButton(">");
+
+        JPanel nav=new JPanel();
+        nav.add(prev);
+        nav.add(title);
+        nav.add(next);
+
+        top.add(back,BorderLayout.WEST);
+        top.add(nav,BorderLayout.CENTER);
+
+        add(top,BorderLayout.NORTH);
+        add(panel,BorderLayout.CENTER);
+
+        back.addActionListener(e->{ new BookingForm(); dispose();});
+        prev.addActionListener(e->{ cal.add(Calendar.MONTH,-1); refresh();});
+        next.addActionListener(e->{ cal.add(Calendar.MONTH,1); refresh();});
+
+        refresh();
+        setVisible(true);
+    }
+
+    void refresh(){
+        panel.removeAll();
+
+        int month=cal.get(Calendar.MONTH);
+        int year=cal.get(Calendar.YEAR);
+
+        title.setText(new java.text.SimpleDateFormat("MMMM yyyy").format(cal.getTime()));
+
+        Calendar temp=(Calendar)cal.clone();
+        temp.set(Calendar.DAY_OF_MONTH,1);
+
+        int start=temp.get(Calendar.DAY_OF_WEEK)-1;
+        int days=temp.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        for(int i=0;i<start;i++) panel.add(new JLabel(""));
+
+        for(int i=1;i<=days;i++){
+            JButton b=new JButton(""+i);
+            String key=String.format("%04d-%02d-%02d",year,month+1,i);
+
+            if(BookingStore.data.containsKey(key))
+                b.setBackground(Color.YELLOW);
+
+            b.addActionListener(e->show(key));
+            panel.add(b);
+        }
+
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    void show(String key){
+        java.util.List<Booking> list=BookingStore.data.get(key);
+
+        if(list==null){
+            JOptionPane.showMessageDialog(this,"No booking");
+            return;
+        }
+
+        StringBuilder sb=new StringBuilder();
+
+        for(int i=0;i<list.size();i++){
+            Booking b=list.get(i);
+            sb.append("Booking ").append(i+1).append("\n");
+            sb.append(b.details).append("\n");
+            sb.append("Status: ").append(b.paid?"PAID":"UNPAID").append("\n");
+            sb.append("--------------------\n");
+        }
+
+        JTextArea area=new JTextArea(sb.toString());
+        area.setEditable(false);
+
+        int option=JOptionPane.showOptionDialog(
+                this,new JScrollPane(area),
+                "Customer Details",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,new String[]{"Open PDF","Close"},"Close");
+
+        if(option==0){
+            try{
+                Desktop.getDesktop().open(new File(list.get(0).pdf));
+            }catch(Exception ignored){}
+        }
+    }
+}
